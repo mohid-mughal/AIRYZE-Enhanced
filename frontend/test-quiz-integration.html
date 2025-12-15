@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .quiz-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .quiz-question {
+            margin: 15px 0;
+            padding: 10px;
+            background: #fff;
+            border-left: 3px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Quiz Integration Test Suite</h1>
+    <p>This page tests the complete quiz flow including all 5 quizzes, scoring, and Gemini integration.</p>
+
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="showQuizzes()">Show All Quizzes</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 1: Quiz Definitions</h2>
+        <button onclick="testQuizDefinitions()">Run Test</button>
+        <div id="test1-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Quiz Structure Validation</h2>
+        <button onclick="testQuizStructure()">Run Test</button>
+        <div id="test2-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Score Calculation</h2>
+        <button onclick="testScoreCalculation()">Run Test</button>
+        <div id="test3-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Kids' Air Adventure Quiz</h2>
+        <button onclick="testKidsQuiz()">Run Test</button>
+        <div id="test4-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 5: Asthma-Smart Quiz</h2>
+        <button onclick="testAsthmaQuiz()">Run Test</button>
+        <div id="test5-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 6: Senior Citizen Safety Quiz</h2>
+        <button onclick="testSeniorQuiz()">Run Test</button>
+        <div id="test6-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 7: Outdoor Athlete Quiz</h2>
+        <button onclick="testAthleteQuiz()">Run Test</button>
+        <div id="test7-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 8: General Knowledge Quiz</h2>
+        <button onclick="testGeneralQuiz()">Run Test</button>
+        <div id="test8-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 9: Quiz Completion Badge</h2>
+        <button onclick="testQuizBadge()">Run Test</button>
+        <div id="test9-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 10: All Quizzes</h2>
+        <button onclick="testAllQuizzes()">Run Test</button>
+        <div id="test10-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Quiz Display</h2>
+        <div id="quiz-display" class="quiz-display"></div>
+    </div>
+
+    <script type="module">
+        import { QUIZ_DEFINITIONS, getQuizById, calculateScore } from './src/utils/quizzes.js';
+        import { calculatePercentage, getPassingGrade } from './src/utils/quizScoring.js';
+        import { BadgeTracker } from './src/utils/badgeTracker.js';
+
+        window.badgeTracker = new BadgeTracker();
+
+        function logResult(testId, message, isPass) {
+            const resultDiv = document.getElementById(`${testId}-results`);
+            const resultClass = isPass ? 'pass' : 'fail';
+            resultDiv.innerHTML += `<div class="test-result ${resultClass}">${isPass ? '✓' : '✗'} ${message}</div>`;
+        }
+
+        function logInfo(testId, message) {
+            const resultDiv = document.getElementById(`${testId}-results`);
+            resultDiv.innerHTML += `<div class="test-result info">ℹ ${message}</div>`;
+        }
+
+        function clearResults(testId) {
+            document.getElementById(`${testId}-results`).innerHTML = '';
+        }
+
+        window.testQuizDefinitions = function() {
+            clearResults('test1');
+            logInfo('test1', 'Testing quiz definitions...');
+
+            const expectedQuizzes = [
+                'kids_adventure',
+                'asthma_smart',
+                'senior_safety',
+                'athlete_quiz',
+                'general_knowledge'
+            ];
+
+            logResult('test1', `Found ${QUIZ_DEFINITIONS.length} quiz definitions`, QUIZ_DEFINITIONS.length === 5);
+
+            expectedQuizzes.forEach(quizId => {
+                const quiz = QUIZ_DEFINITIONS.find(q => q.id === quizId);
+                logResult('test1', `Quiz "${quizId}" exists`, !!quiz);
+                if (quiz) {
+                    logResult('test1', `  - Has title: ${quiz.title}`, !!quiz.title);
+                    logResult('test1', `  - Has questions: ${quiz.questions.length}`, quiz.questions.length > 0);
+                    logResult('test1', `  - Has icon: ${quiz.icon}`, !!quiz.icon);
+                }
+            });
+        };
+
+        window.testQuizStructure = function() {
+            clearResults('test2');
+            logInfo('test2', 'Testing quiz structure validation...');
+
+            QUIZ_DEFINITIONS.forEach(quiz => {
+                logInfo('test2', `Validating ${quiz.title}...`);
+                
+                // Check question count (8-10)
+                const questionCount = quiz.questions.length;
+                logResult('test2', `  - Has 8-10 questions (${questionCount})`, questionCount >= 8 && questionCount <= 10);
+                
+                // Check each question
+                quiz.questions.forEach((q, index) => {
+                    const optionCount = q.options.length;
+                    logResult('test2', `  - Q${index + 1} has 3-4 options (${optionCount})`, optionCount >= 3 && optionCount <= 4);
+                    logResult('test2', `  - Q${index + 1} has correct answer`, q.correctIndex >= 0 && q.correctIndex < optionCount);
+                    logResult('test2', `  - Q${index + 1} has question text`, !!q.question);
+                    logResult('test2', `  - Q${index + 1} has tip`, !!q.tip);
+                });
+            });
+        };
+
+        window.testScoreCalculation = function() {
+            clearResults('test3');
+            logInfo('test3', 'Testing score calculation...');
+
+            // Test perfect score
+            const answers1 = Array(10).fill(true);
+            const score1 = calculateScore(answers1);
+            logResult('test3', `Perfect score (10/10): ${score1}%`, score1 === 100);
+
+            // Test 50% score
+            const answers2 = [true, false, true, false, true, false, true, false, true, false];
+            const score2 = calculateScore(answers2);
+            logResult('test3', `50% score (5/10): ${score2}%`, score2 === 50);
+
+            // Test zero score
+            const answers3 = Array(10).fill(false);
+            const score3 = calculateScore(answers3);
+            logResult('test3', `Zero score (0/10): ${score3}%`, score3 === 0);
+
+            // Test percentage calculation
+            const pct1 = calculatePercentage(8, 10);
+            logResult('test3', `Percentage 8/10 = 80%`, pct1 === 80);
+
+            const pct2 = calculatePercentage(7, 9);
+            logResult('test3', `Percentage 7/9 ≈ 77.78%`, Math.abs(pct2 - 77.78) < 0.01);
+
+            // Test passing grade
+            const passing = getPassingGrade(10);
+            logResult('test3', `Passing grade for 10 questions: ${passing}`, passing === 6);
+        };
+
+        function testQuiz(testId, quizId, quizName) {
+            clearResults(testId);
+            logInfo(testId, `Testing ${quizName}...`);
+
+            const quiz = getQuizById(quizId);
+            
+            if (!quiz) {
+                logResult(testId, 'Quiz not found', false);
+                return;
+            }
+
+            logResult(testId, 'Quiz loaded successfully', true);
+            logInfo(testId, `Title: ${quiz.title}`);
+            logInfo(testId, `Questions: ${quiz.questions.length}`);
+
+            // Simulate perfect score
+            const correctAnswers = quiz.questions.map(q => q.correctIndex);
+            const score = calculateScore(correctAnswers.map(() => true));
+            logResult(testId, `Perfect score achievable: ${score}%`, score === 100);
+
+            // Simulate partial score
+            const partialAnswers = quiz.questions.map((q, i) => i % 2 === 0);
+            const partialScore = calculateScore(partialAnswers);
+            logInfo(testId, `Partial score test: ${partialScore}%`);
+
+            // Check question quality
+            let allQuestionsValid = true;
+            quiz.questions.forEach((q, i) => {
+                if (!q.question || !q.options || q.options.length < 3 || q.correctIndex === undefined) {
+                    logResult(testId, `Question ${i + 1} is invalid`, false);
+                    allQuestionsValid = false;
+                }
+            });
+
+            if (allQuestionsValid) {
+                logResult(testId, 'All questions are valid', true);
+            }
+        }
+
+        window.testKidsQuiz = function() {
+            testQuiz('test4', 'kids_adventure', "Kids' Air Adventure");
+        };
+
+        window.testAsthmaQuiz = function() {
+            testQuiz('test5', 'asthma_smart', 'Asthma-Smart Quiz');
+        };
+
+        window.testSeniorQuiz = function() {
+            testQuiz('test6', 'senior_safety', 'Senior Citizen Safety Quiz');
+        };
+
+        window.testAthleteQuiz = function() {
+            testQuiz('test7', 'athlete_quiz', 'Outdoor Athlete Quiz');
+        };
+
+        window.testGeneralQuiz = function() {
+            testQuiz('test8', 'general_knowledge', 'General Knowledge Quiz');
+        };
+
+        window.testQuizBadge = function() {
+            clearResults('test9');
+            logInfo('test9', 'Testing Quiz Master badge earning...');
+
+            localStorage.clear();
+            window.badgeTracker = new BadgeTracker();
+
+            // Complete 3 quizzes
+            for (let i = 0; i < 3; i++) {
+                const result = window.badgeTracker.trackAction('quiz_complete');
+                logInfo('test9', `Quiz ${i + 1}/3 completed`);
+                
+                if (i === 2 && result.badgesEarned && result.badgesEarned.length > 0) {
+                    const earned = result.badgesEarned.find(b => b.id === 'quiz_master');
+                    logResult('test9', 'Quiz Master badge earned!', !!earned);
+                    if (earned && earned.message) {
+                        logInfo('test9', `Badge message: ${earned.message.substring(0, 100)}...`);
+                    }
+                }
+            }
+
+            const progress = window.badgeTracker.getProgress();
+            logResult('test9', 'Badge in earned list', progress.earnedBadges.includes('quiz_master'));
+            logResult('test9', 'Quiz count is 3', progress.quizzes_completed === 3);
+        };
+
+        window.testAllQuizzes = function() {
+            clearResults('test10');
+            logInfo('test10', 'Testing all 5 quizzes...');
+
+            let allPassed = true;
+
+            QUIZ_DEFINITIONS.forEach(quiz => {
+                logInfo('test10', `Testing ${quiz.title}...`);
+                
+                // Check structure
+                if (quiz.questions.length < 8 || quiz.questions.length > 10) {
+                    logResult('test10', `  - Invalid question count: ${quiz.questions.length}`, false);
+                    allPassed = false;
+                } else {
+                    logResult('test10', `  - Question count OK: ${quiz.questions.length}`, true);
+                }
+
+                // Check all questions
+                let quizValid = true;
+                quiz.questions.forEach((q, i) => {
+                    if (!q.question || !q.options || q.options.length < 3 || q.options.length > 4) {
+                        quizValid = false;
+                    }
+                    if (q.correctIndex === undefined || q.correctIndex < 0 || q.correctIndex >= q.options.length) {
+                        quizValid = false;
+                    }
+                });
+
+                logResult('test10', `  - All questions valid`, quizValid);
+                if (!quizValid) allPassed = false;
+
+                // Test scoring
+                const perfectScore = calculateScore(Array(quiz.questions.length).fill(true));
+                logResult('test10', `  - Perfect score: ${perfectScore}%`, perfectScore === 100);
+                if (perfectScore !== 100) allPassed = false;
+            });
+
+            logResult('test10', 'All 5 quizzes passed validation', allPassed);
+        };
+
+        window.showQuizzes = function() {
+            const display = document.getElementById('quiz-display');
+            let html = '<h3>All Quizzes:</h3>';
+
+            QUIZ_DEFINITIONS.forEach(quiz => {
+                html += `<div class="quiz-question">`;
+                html += `<h4>${quiz.icon} ${quiz.title}</h4>`;
+                html += `<p><strong>Questions:</strong> ${quiz.questions.length}</p>`;
+                html += `<p><strong>ID:</strong> ${quiz.id}</p>`;
+                html += `<details>`;
+                html += `<summary>View Questions</summary>`;
+                quiz.questions.forEach((q, i) => {
+                    html += `<div style="margin: 10px 0; padding: 10px; background: #f8f9fa;">`;
+                    html += `<strong>Q${i + 1}:</strong> ${q.question}<br>`;
+                    html += `<strong>Options:</strong><br>`;
+                    q.options.forEach((opt, j) => {
+                        const isCorrect = j === q.correctIndex ? ' ✓' : '';
+                        html += `${j + 1}. ${opt}${isCorrect}<br>`;
+                    });
+                    html += `<strong>Tip:</strong> ${q.tip}`;
+                    html += `</div>`;
+                });
+                html += `</details>`;
+                html += `</div>`;
+            });
+
+            display.innerHTML = html;
+        };
+
+        window.runAllTests = async function() {
+            testQuizDefinitions();
+            await new Promise(r => setTimeout(r, 500));
+            testQuizStructure();
+            await new Promise(r => setTimeout(r, 500));
+            testScoreCalculation();
+            await new Promise(r => setTimeout(r, 500));
+            testKidsQuiz();
+            await new Promise(r => setTimeout(r, 500));
+            testAsthmaQuiz();
+            await new Promise(r => setTimeout(r, 500));
+            testSeniorQuiz();
+            await new Promise(r => setTimeout(r, 500));
+            testAthleteQuiz();
+            await new Promise(r => setTimeout(r, 500));
+            testGeneralQuiz();
+            await new Promise(r => setTimeout(r, 500));
+            testQuizBadge();
+            await new Promise(r => setTimeout(r, 500));
+            testAllQuizzes();
+        };
+
+        // Show quizzes on load
+        showQuizzes();
+    </script>
+</body>
+</html>

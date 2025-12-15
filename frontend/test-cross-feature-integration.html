@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross-Feature Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .integration-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .feature-box {
+            border: 2px solid #007bff;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Cross-Feature Integration Test Suite</h1>
+    <p>This page tests badge tracking integration across Dashboard, CrowdSourced, City Views, and Email Alerts.</p>
+
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearAllProgress()">Clear All Progress</button>
+        <button onclick="showIntegrationStatus()">Show Integration Status</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 1: Dashboard AQI Check Tracking</h2>
+        <button onclick="testDashboardTracking()">Run Test</button>
+        <div id="test1-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: CrowdSourced Report Tracking</h2>
+        <button onclick="testCrowdSourcedTracking()">Run Test</button>
+        <div id="test2-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: City View Tracking</h2>
+        <button onclick="testCityViewTracking()">Run Test</button>
+        <div id="test3-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Email Alert Tracking</h2>
+        <button onclick="testEmailAlertTracking()">Run Test</button>
+        <div id="test4-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 5: Multi-Feature Badge Earning</h2>
+        <button onclick="testMultiFeatureBadges()">Run Test</button>
+        <div id="test5-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 6: Streak Continuity</h2>
+        <button onclick="testStreakContinuity()">Run Test</button>
+        <div id="test6-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 7: Badge Sync Across Features</h2>
+        <button onclick="testBadgeSync()">Run Test</button>
+        <div id="test7-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Integration Status</h2>
+        <div id="integration-display" class="integration-display"></div>
+    </div>
+
+    <script type="module">
+        import { BadgeTracker } from './src/utils/badgeTracker.js';
+        import { BADGE_DEFINITIONS } from './src/utils/badges.js';
+
+        window.badgeTracker = new BadgeTracker();
+
+        function logResult(testId, message, isPass) {
+            const resultDiv = document.getElementById(`${testId}-results`);
+            const resultClass = isPass ? 'pass' : 'fail';
+            resultDiv.innerHTML += `<div class="test-result ${resultClass}">${isPass ? '✓' : '✗'} ${message}</div>`;
+        }
+
+        function logInfo(testId, message) {
+            const resultDiv = document.getElementById(`${testId}-results`);
+            resultDiv.innerHTML += `<div class="test-result info">ℹ ${message}</div>`;
+        }
+
+        function logWarning(testId, message) {
+            const resultDiv = document.getElementById(`${testId}-results`);
+            resultDiv.innerHTML += `<div class="test-result warning">⚠ ${message}</div>`;
+        }
+
+        function clearResults(testId) {
+            document.getElementById(`${testId}-results`).innerHTML = '';
+        }
+
+        // Test 1: Dashboard AQI Check Tracking
+        window.testDashboardTracking = function() {
+            clearResults('test1');
+            logInfo('test1', 'Testing Dashboard AQI check tracking...');
+
+            const initialProgress = window.badgeTracker.getProgress();
+            const initialChecks = initialProgress.aqi_checks || 0;
+
+            logInfo('test1', `Initial AQI checks: ${initialChecks}`);
+
+            // Simulate Dashboard AQI check
+            logInfo('test1', 'Simulating Dashboard page load with AQI check...');
+            const result = window.badgeTracker.trackAction('aqi_check');
+
+            const afterProgress = window.badgeTracker.getProgress();
+            const afterChecks = afterProgress.aqi_checks || 0;
+
+            logResult('test1', 'AQI check tracked', afterChecks === initialChecks + 1);
+            logResult('test1', 'Streak updated', afterProgress.lastAqiCheck !== undefined);
+
+            // Check if badge earned (if at threshold)
+            if (result.badgesEarned && result.badgesEarned.length > 0) {
+                logInfo('test1', `Badge earned: ${result.badgesEarned[0].name}`);
+            }
+
+            // Verify localStorage updated
+            const saved = localStorage.getItem('badgeProgress');
+            logResult('test1', 'Progress saved to localStorage', !!saved);
+
+            logInfo('test1', `Current streak: ${afterChecks} days`);
+        };
+
+        // Test 2: CrowdSourced Report Tracking
+        window.testCrowdSourcedTracking = function() {
+            clearResults('test2');
+            logInfo('test2', 'Testing CrowdSourced feature tracking...');
+
+            const initialProgress = window.badgeTracker.getProgress();
+            const initialReports = initialProgress.reports_submitted || 0;
+            const initialUpvotes = initialProgress.upvotes_given || 0;
+            const initialDownvotes = initialProgress.downvotes_given || 0;
+
+            // Test report submission
+            logInfo('test2', 'Simulating report submission...');
+            window.badgeTracker.trackAction('report_submit');
+            
+            let progress = window.badgeTracker.getProgress();
+            logResult('test2', 'Report submission tracked', progress.reports_submitted === initialReports + 1);
+
+            // Test upvote
+            logInfo('test2', 'Simulating upvote...');
+            window.badgeTracker.trackAction('upvote');
+            
+            progress = window.badgeTracker.getProgress();
+            logResult('test2', 'Upvote tracked', progress.upvotes_given === initialUpvotes + 1);
+
+            // Test downvote
+            logInfo('test2', 'Simulating downvote...');
+            window.badgeTracker.trackAction('downvote');
+            
+            progress = window.badgeTracker.getProgress();
+            logResult('test2', 'Downvote tracked', progress.downvotes_given === initialDownvotes + 1);
+
+            logInfo('test2', `Reports: ${progress.reports_submitted}, Upvotes: ${progress.upvotes_given}, Downvotes: ${progress.downvotes_given}`);
+        };
+
+        // Test 3: City View Tracking
+        window.testCityViewTracking = function() {
+            clearResults('test3');
+            logInfo('test3', 'Testing city view tracking...');
+
+            const initialProgress = window.badgeTracker.getProgress();
+            const initialCities = initialProgress.cities_viewed ? initialProgress.cities_viewed.length : 0;
+
+            logInfo('test3', `Initial cities viewed: ${initialCities}`);
+
+            // Test viewing different cities
+            const cities = ['Karachi', 'Lahore', 'Islamabad'];
+            
+            cities.forEach(city => {
+                logInfo('test3', `Simulating view of ${city}...`);
+                window.badgeTracker.trackAction('city_view', city);
+            });
+
+            const progress = window.badgeTracker.getProgress();
+            const finalCities = progress.cities_viewed ? progress.cities_viewed.length : 0;
+
+            logResult('test3', 'Cities tracked', finalCities === initialCities + 3);
+            logResult('test3', 'Cities stored as array', Array.isArray(progress.cities_viewed));
+
+            // Test duplicate city (should not increase count)
+            logInfo('test3', 'Testing duplicate city view (Karachi again)...');
+            window.badgeTracker.trackAction('city_view', 'Karachi');
+            
+            const afterDuplicate = window.badgeTracker.getProgress();
+            const afterDuplicateCities = afterDuplicate.cities_viewed ? afterDuplicate.cities_viewed.length : 0;
+            
+            logResult('test3', 'Duplicate city not counted', afterDuplicateCities === finalCities);
+
+            logInfo('test3', `Cities viewed: ${progress.cities_viewed ? progress.cities_viewed.join(', ') : 'none'}`);
+        };
+
+        // Test 4: Email Alert Tracking
+        window.testEmailAlertTracking = function() {
+            clearResults('test4');
+            logInfo('test4', 'Testing email alert tracking...');
+            logWarning('test4', 'Note: Email alert tracking requires backend integration');
+
+            const initialProgress = window.badgeTracker.getProgress();
+            const initialAlerts = initialProgress.alerts_opened || 0;
+
+            logInfo('test4', `Initial alerts opened: ${initialAlerts}`);
+
+            // Simulate alert open
+            logInfo('test4', 'Simulating alert open...');
+            window.badgeTracker.trackAction('alert_opened');
+
+            const progress = window.badgeTracker.getProgress();
+            logResult('test4', 'Alert open tracked', progress.alerts_opened === initialAlerts + 1);
+
+            // Simulate multiple alerts
+            logInfo('test4', 'Simulating 4 more alert opens...');
+            for (let i = 0; i < 4; i++) {
+                window.badgeTracker.trackAction('alert_opened');
+            }
+
+            const finalProgress = window.badgeTracker.getProgress();
+            logResult('test4', 'Multiple alerts tracked', finalProgress.alerts_opened === initialAlerts + 5);
+
+            // Check if Alert Responder badge earned
+            if (finalProgress.alerts_opened >= 5 && finalProgress.earnedBadges.includes('alert_responder')) {
+                logInfo('test4', '🎉 Alert Responder badge earned!');
+            }
+
+            logInfo('test4', `Total alerts opened: ${finalProgress.alerts_opened}`);
+        };
+
+        // Test 5: Multi-Feature Badge Earning
+        window.testMultiFeatureBadges = function() {
+            clearResults('test5');
+            logInfo('test5', 'Testing badge earning across multiple features...');
+
+            localStorage.clear();
+            window.badgeTracker = new BadgeTracker();
+
+            // Dashboard: AQI checks
+            logInfo('test5', 'Dashboard: Checking AQI for 7 days...');
+            const today = new Date();
+            for (let i = 0; i < 7; i++) {
+                const checkDate = new Date(today);
+                checkDate.setDate(today.getDate() - (6 - i));
+                localStorage.setItem('lastAqiCheck', checkDate.toISOString().split('T')[0]);
+                window.badgeTracker.trackAction('aqi_check');
+            }
+
+            // CrowdSourced: Submit reports
+            logInfo('test5', 'CrowdSourced: Submitting 5 reports...');
+            for (let i = 0; i < 5; i++) {
+                window.badgeTracker.trackAction('report_submit');
+            }
+
+            // City Views: View 5 cities
+            logInfo('test5', 'City Views: Viewing 5 different cities...');
+            const cities = ['Karachi', 'Lahore', 'Islamabad', 'Peshawar', 'Quetta'];
+            cities.forEach(city => {
+                window.badgeTracker.trackAction('city_view', city);
+            });
+
+            // Email Alerts: Open 5 alerts
+            logInfo('test5', 'Email Alerts: Opening 5 alerts...');
+            for (let i = 0; i < 5; i++) {
+                window.badgeTracker.trackAction('alert_opened');
+            }
+
+            const progress = window.badgeTracker.getProgress();
+            
+            logInfo('test5', `Badges earned: ${progress.earnedBadges.length}`);
+            
+            const expectedBadges = ['daily_streak_7', 'report_contributor', 'city_explorer', 'alert_responder'];
+            expectedBadges.forEach(badgeId => {
+                const earned = progress.earnedBadges.includes(badgeId);
+                const badge = BADGE_DEFINITIONS.find(b => b.id === badgeId);
+                logResult('test5', `${badge.name} earned`, earned);
+            });
+
+            logResult('test5', 'Multiple features tracked simultaneously', progress.earnedBadges.length >= 4);
+        };
+
+        // Test 6: Streak Continuity
+        window.testStreakContinuity = function() {
+            clearResults('test6');
+            logInfo('test6', 'Testing streak continuity across sessions...');
+
+            localStorage.clear();
+            window.badgeTracker = new BadgeTracker();
+
+            // Day 1
+            logInfo('test6', 'Day 1: First AQI check...');
+            const day1 = new Date();
+            day1.setDate(day1.getDate() - 2);
+            localStorage.setItem('lastAqiCheck', day1.toISOString().split('T')[0]);
+            window.badgeTracker.trackAction('aqi_check');
+
+            let progress = window.badgeTracker.getProgress();
+            logResult('test6', 'Day 1 streak: 1', progress.aqi_checks === 1);
+
+            // Day 2 (consecutive)
+            logInfo('test6', 'Day 2: Consecutive check...');
+            const day2 = new Date();
+            day2.setDate(day2.getDate() - 1);
+            localStorage.setItem('lastAqiCheck', day2.toISOString().split('T')[0]);
+            window.badgeTracker.trackAction('aqi_check');
+
+            progress = window.badgeTracker.getProgress();
+            logResult('test6', 'Day 2 streak: 2', progress.aqi_checks === 2);
+
+            // Day 3 (consecutive)
+            logInfo('test6', 'Day 3: Consecutive check...');
+            const day3 = new Date();
+            localStorage.setItem('lastAqiCheck', day3.toISOString().split('T')[0]);
+            window.badgeTracker.trackAction('aqi_check');
+
+            progress = window.badgeTracker.getProgress();
+            logResult('test6', 'Day 3 streak: 3', progress.aqi_checks === 3);
+
+            // Simulate missed day (streak should reset)
+            logInfo('test6', 'Testing missed day (streak reset)...');
+            const missedDay = new Date();
+            missedDay.setDate(missedDay.getDate() + 2); // Skip a day
+            localStorage.setItem('lastAqiCheck', missedDay.toISOString().split('T')[0]);
+            window.badgeTracker.trackAction('aqi_check');
+
+            progress = window.badgeTracker.getProgress();
+            logResult('test6', 'Streak reset after missed day', progress.aqi_checks === 1);
+        };
+
+        // Test 7: Badge Sync Across Features
+        window.testBadgeSync = function() {
+            clearResults('test7');
+            logInfo('test7', 'Testing badge sync across features...');
+
+            // Track actions from different features
+            logInfo('test7', 'Tracking actions from multiple features...');
+            
+            window.badgeTracker.trackAction('aqi_check');
+            window.badgeTracker.trackAction('report_submit');
+            window.badgeTracker.trackAction('city_view', 'Karachi');
+            window.badgeTracker.trackAction('upvote');
+
+            // Check localStorage
+            const saved = localStorage.getItem('badgeProgress');
+            logResult('test7', 'Progress saved to localStorage', !!saved);
+
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                logResult('test7', 'All counters present', 
+                    parsed.aqi_checks !== undefined &&
+                    parsed.reports_submitted !== undefined &&
+                    parsed.cities_viewed !== undefined &&
+                    parsed.upvotes_given !== undefined
+                );
+            }
+
+            // Simulate new session
+            logInfo('test7', 'Simulating new session (new BadgeTracker instance)...');
+            const newTracker = new BadgeTracker();
+            const restoredProgress = newTracker.getProgress();
+
+            logResult('test7', 'Progress restored in new session', 
+                restoredProgress.aqi_checks > 0 &&
+                restoredProgress.reports_submitted > 0
+            );
+
+            logInfo('test7', 'All features share same badge progress state');
+        };
+
+        window.clearAllProgress = function() {
+            localStorage.clear();
+            window.badgeTracker = new BadgeTracker();
+            showIntegrationStatus();
+            alert('All progress cleared!');
+        };
+
+        window.showIntegrationStatus = function() {
+            const progress = window.badgeTracker.getProgress();
+            const display = document.getElementById('integration-display');
+            
+            let html = '<h3>Integration Status</h3>';
+            
+            html += '<div class="feature-box">';
+            html += '<h4>📊 Dashboard Integration</h4>';
+            html += `<p>AQI Checks: ${progress.aqi_checks || 0}</p>`;
+            html += `<p>Last Check: ${progress.lastAqiCheck || 'Never'}</p>`;
+            html += `<p>Daily Streak Badge: ${progress.earnedBadges.includes('daily_streak_7') ? '✅ Earned' : '⏳ In Progress'}</p>`;
+            html += '</div>';
+            
+            html += '<div class="feature-box">';
+            html += '<h4>📝 CrowdSourced Integration</h4>';
+            html += `<p>Reports Submitted: ${progress.reports_submitted || 0}</p>`;
+            html += `<p>Upvotes Given: ${progress.upvotes_given || 0}</p>`;
+            html += `<p>Downvotes Given: ${progress.downvotes_given || 0}</p>`;
+            html += `<p>Report Contributor Badge: ${progress.earnedBadges.includes('report_contributor') ? '✅ Earned' : '⏳ In Progress'}</p>`;
+            html += `<p>Upvoter Badge: ${progress.earnedBadges.includes('upvoter') ? '✅ Earned' : '⏳ In Progress'}</p>`;
+            html += '</div>';
+            
+            html += '<div class="feature-box">';
+            html += '<h4>🌍 City Views Integration</h4>';
+            html += `<p>Cities Viewed: ${progress.cities_viewed ? progress.cities_viewed.length : 0}</p>`;
+            if (progress.cities_viewed && progress.cities_viewed.length > 0) {
+                html += `<p>Cities: ${progress.cities_viewed.join(', ')}</p>`;
+            }
+            html += `<p>City Explorer Badge: ${progress.earnedBadges.includes('city_explorer') ? '✅ Earned' : '⏳ In Progress'}</p>`;
+            html += '</div>';
+            
+            html += '<div class="feature-box">';
+            html += '<h4>📧 Email Alerts Integration</h4>';
+            html += `<p>Alerts Opened: ${progress.alerts_opened || 0}</p>`;
+            html += `<p>Alert Responder Badge: ${progress.earnedBadges.includes('alert_responder') ? '✅ Earned' : '⏳ In Progress'}</p>`;
+            html += '</div>';
+            
+            html += '<div class="feature-box">';
+            html += '<h4>🎓 Quiz Integration</h4>';
+            html += `<p>Quizzes Completed: ${progress.quizzes_completed || 0}</p>`;
+            html += `<p>Quiz Master Badge: ${progress.earnedBadges.includes('quiz_master') ? '✅ Earned' : '⏳ In Progress'}</p>`;
+            html += '</div>';
+            
+            html += '<div class="feature-box">';
+            html += '<h4>🏆 Total Progress</h4>';
+            html += `<p><strong>Badges Earned: ${progress.earnedBadges.length}/8</strong></p>`;
+            html += '<p>Earned Badges:</p><ul>';
+            progress.earnedBadges.forEach(badgeId => {
+                const badge = BADGE_DEFINITIONS.find(b => b.id === badgeId);
+                html += `<li>${badge ? badge.name : badgeId}</li>`;
+            });
+            html += '</ul></div>';
+            
+            display.innerHTML = html;
+        };
+
+        window.runAllTests = async function() {
+            testDashboardTracking();
+            await new Promise(r => setTimeout(r, 500));
+            testCrowdSourcedTracking();
+            await new Promise(r => setTimeout(r, 500));
+            testCityViewTracking();
+            await new Promise(r => setTimeout(r, 500));
+            testEmailAlertTracking();
+            await new Promise(r => setTimeout(r, 500));
+            testMultiFeatureBadges();
+            await new Promise(r => setTimeout(r, 500));
+            testStreakContinuity();
+            await new Promise(r => setTimeout(r, 500));
+            testBadgeSync();
+            await new Promise(r => setTimeout(r, 500));
+            showIntegrationStatus();
+        };
+
+        // Show initial status
+        showIntegrationStatus();
+    </script>
+</body>
+</html>

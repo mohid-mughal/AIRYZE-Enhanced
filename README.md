@@ -26,6 +26,8 @@
 
 **Purpose**: Airyze AQI Monitor is designed to provide real-time air quality information to help users make informed decisions about outdoor activities and protect their health. The application focuses on monitoring air quality across Pakistan's major cities and allows users to check AQI for any location worldwide.
 
+**Database**: This application uses Supabase (cloud-hosted PostgreSQL) for data storage, providing reliable cloud infrastructure without requiring local database setup.
+
 **What It Does**:
 - Fetches real-time air quality data from OpenWeather API
 - Displays AQI (Air Quality Index) on an interactive map
@@ -92,7 +94,8 @@
 ### Backend
 - **Node.js** - Runtime environment
 - **Express 5.1.0** - Web framework
-- **PostgreSQL** - Database
+- **Supabase** - Cloud PostgreSQL database
+- **@supabase/supabase-js** - Supabase client library
 - **bcryptjs** - Password hashing
 - **node-cron** - Scheduled tasks
 - **nodemailer** - Email service
@@ -169,7 +172,7 @@ Airyze AQI/
 
 ### Prerequisites
 - Node.js (v18 or higher)
-- PostgreSQL database
+- Supabase account and project
 - OpenWeather API key
 - Email service credentials (for alerts)
 
@@ -190,8 +193,11 @@ cd ../frontend
 npm install
 ```
 
-### Step 4: Database Setup
-Create a PostgreSQL database and run the following SQL to create tables:
+### Step 4: Supabase Setup
+
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Go to the SQL Editor in your Supabase dashboard
+3. Run the following SQL to create tables:
 
 ```sql
 -- Users table
@@ -202,8 +208,11 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     city VARCHAR(255),
     last_aqi INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Index for email lookups
+CREATE INDEX idx_users_email ON users(email);
 
 -- AQI data table
 CREATE TABLE aqi_data (
@@ -220,10 +229,19 @@ CREATE TABLE aqi_data (
     pm2_5 DECIMAL(10, 2),
     pm10 DECIMAL(10, 2),
     nh3 DECIMAL(10, 2),
-    timestamp TIMESTAMP NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Indexes for performance
+CREATE INDEX idx_aqi_data_location ON aqi_data(location_name);
+CREATE INDEX idx_aqi_data_timestamp ON aqi_data(timestamp DESC);
 ```
+
+4. Get your Supabase credentials:
+   - Go to Project Settings → API
+   - Copy the Project URL
+   - Copy the `anon` public key
 
 ### Step 5: Environment Variables
 Create a `.env` file in the `backend` directory (see [Environment Variables](#environment-variables) section).
@@ -258,8 +276,9 @@ Create a `.env` file in the `backend` directory with the following variables:
 # Server
 PORT=5000
 
-# Database
-DATABASE_URL=postgresql://username:password@localhost:5432/airyze_aqi
+# Supabase Configuration
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
 
 # OpenWeather API
 OPENWEATHER_API_KEY=your_openweather_api_key_here
@@ -275,12 +294,19 @@ EMAIL_FROM=your_email@gmail.com
 
 ### Getting API Keys
 
-1. **OpenWeather API Key**:
+1. **Supabase Credentials**:
+   - Create a project at [Supabase](https://supabase.com)
+   - Go to Project Settings → API
+   - Copy the Project URL as `SUPABASE_URL`
+   - Copy the `anon` public key as `SUPABASE_ANON_KEY`
+   - Note: The database tables should be created using the SQL Editor (see Step 4 above)
+
+2. **OpenWeather API Key**:
    - Sign up at [OpenWeather](https://openweathermap.org/api)
    - Navigate to API keys section
    - Copy your API key
 
-2. **Email Service**:
+3. **Email Service**:
    - For Gmail: Use App Password (not regular password)
    - Enable 2FA and generate app password in Google Account settings
 
@@ -596,10 +622,11 @@ Cron jobs are configured in `backend/jobs/aqiAlerts.js`:
 
 1. **Set Environment Variables**:
    - Add all required environment variables in deployment platform
+   - Ensure `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set
 
 2. **Database**:
-   - Use managed PostgreSQL service (Railway, Supabase, etc.)
-   - Update `DATABASE_URL` in environment variables
+   - Database is hosted on Supabase (no additional setup needed)
+   - Ensure tables are created in your Supabase project (see Setup section)
 
 3. **Build Command**:
    ```bash
@@ -628,7 +655,36 @@ Cron jobs are configured in `backend/jobs/aqiAlerts.js`:
 ### Recommended Platforms
 - **Frontend**: Vercel, Netlify
 - **Backend**: Render, Railway, Heroku
-- **Database**: Railway PostgreSQL, Supabase, AWS RDS
+- **Database**: Supabase (already configured)
+
+---
+
+## 🔄 Migration from PostgreSQL
+
+If you're upgrading from a previous version that used local PostgreSQL:
+
+1. **Export your existing data** (if you want to preserve it):
+   ```bash
+   pg_dump airyze_aqi > backup.sql
+   ```
+
+2. **Create tables in Supabase** using the SQL provided in the Setup section
+
+3. **Import data to Supabase** (optional):
+   - Use Supabase SQL Editor to import your data
+   - Or use the Supabase API to migrate programmatically
+
+4. **Update environment variables**:
+   - Remove `DATABASE_URL`
+   - Add `SUPABASE_URL` and `SUPABASE_ANON_KEY`
+
+5. **Remove pg package** (already done in latest version):
+   ```bash
+   cd backend
+   npm uninstall pg
+   ```
+
+The application code has been updated to use Supabase's query builder instead of raw SQL queries.
 
 ---
 

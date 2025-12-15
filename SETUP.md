@@ -5,21 +5,36 @@ This guide will help you get Airyze AQI Monitor up and running quickly.
 ## Prerequisites Checklist
 
 - [ ] Node.js (v18+) installed
-- [ ] PostgreSQL database created
+- [ ] Supabase account and project created
 - [ ] OpenWeather API key obtained
 - [ ] Email service credentials (for alerts)
 
+## ⚠️ Important: Supabase Configuration
+
+**This project uses Supabase Cloud (hosted), NOT local Docker/Supabase.**
+
+- All database operations use the remote Supabase instance
+- No Docker Desktop required
+- Migrations are pushed to remote database using `supabase db push`
+- See `supabase/SUPABASE_SETUP.md` for detailed configuration
+
 ## Step-by-Step Setup
 
-### 1. Database Setup
+### 1. Supabase Setup
+
+**Create a Supabase Project:**
+1. Go to [supabase.com](https://supabase.com) and sign up/login
+2. Click "New Project"
+3. Choose your organization and set project details
+4. Wait for the project to be provisioned
+
+**Create Database Tables:**
+1. Open your Supabase project dashboard
+2. Navigate to the SQL Editor (left sidebar)
+3. Click "New Query"
+4. Copy and paste the following SQL:
 
 ```sql
--- Connect to PostgreSQL and create database
-CREATE DATABASE airyze_aqi;
-
--- Connect to the database
-\c airyze_aqi
-
 -- Create users table
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -28,8 +43,11 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     city VARCHAR(255),
     last_aqi INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Index for email lookups
+CREATE INDEX idx_users_email ON users(email);
 
 -- Create aqi_data table
 CREATE TABLE aqi_data (
@@ -46,10 +64,24 @@ CREATE TABLE aqi_data (
     pm2_5 DECIMAL(10, 2),
     pm10 DECIMAL(10, 2),
     nh3 DECIMAL(10, 2),
-    timestamp TIMESTAMP NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Indexes for performance
+CREATE INDEX idx_aqi_data_location ON aqi_data(location_name);
+CREATE INDEX idx_aqi_data_timestamp ON aqi_data(timestamp DESC);
 ```
+
+5. Click "Run" to execute the SQL
+
+**Get Your Supabase Credentials:**
+1. Go to Project Settings (gear icon in sidebar)
+2. Click on "API" in the settings menu
+3. Copy the following values:
+   - **Project URL** (e.g., `https://xxxxx.supabase.co`)
+   - **anon public** key (under "Project API keys")
+4. Keep these values for the next step
 
 ### 2. Backend Setup
 
@@ -67,15 +99,24 @@ touch .env
 Add to `backend/.env`:
 ```env
 PORT=5000
-DATABASE_URL=postgresql://username:password@localhost:5432/airyze_aqi
+
+# Supabase Configuration
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key-here
+
+# OpenWeather API
 OPENWEATHER_API_KEY=your_api_key_here
 OPENWEATHER_KEY=your_api_key_here
+
+# Email Service (for alerts)
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_app_password
 EMAIL_FROM=your_email@gmail.com
 ```
+
+**Important:** Replace the placeholder values with your actual credentials from Step 1.
 
 ### 3. Frontend Setup
 
@@ -138,10 +179,11 @@ npm run dev
 
 ## Troubleshooting
 
-### Database Connection Error
-- Verify PostgreSQL is running: `pg_isready`
-- Check `DATABASE_URL` format in `.env`
-- Ensure database exists and tables are created
+### Supabase Connection Error
+- Verify `SUPABASE_URL` and `SUPABASE_ANON_KEY` are correct in `.env`
+- Check that your Supabase project is active (not paused)
+- Ensure tables are created in the SQL Editor
+- Verify no extra spaces or quotes in `.env` values
 
 ### API Key Errors
 - Verify OpenWeather API key is valid
@@ -171,6 +213,9 @@ npm run dev
    - Verify AQI data appears
 
 3. **Test Database:**
+   - Go to Supabase Dashboard → Table Editor
+   - Check that `users` and `aqi_data` tables exist
+   - Or use SQL Editor:
    ```sql
    SELECT * FROM users;
    SELECT * FROM aqi_data LIMIT 5;

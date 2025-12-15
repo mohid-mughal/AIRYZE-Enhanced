@@ -10,6 +10,8 @@ node_modules/
 .env
 .env.local
 .env.*.local
+backend/.env
+**/.env
 
 # -----------------------------
 # Build / output directories

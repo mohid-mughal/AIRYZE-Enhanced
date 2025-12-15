@@ -8,21 +8,83 @@ import Recommendations from "../components/Recommendations";
 import { fetchAQI } from "../api/aqiService";
 import DailyAQILineChart from "../components/DailyAQILineChart";
 import AQICategoryFrequencyChart from "../components/FrequencyChart";
-import AuthModal from "../components/AuthModal";
-import { getCurrentUser, logout as logoutUser } from "../api/authService";
+import Sidebar from "../components/Sidebar";
+import PersonalizedWelcome from "../components/PersonalizedWelcome";
+import InstantEmailButton from "../components/InstantEmailButton";
+import AlertPreferencesModal from "../components/AlertPreferencesModal";
+import AIChatbot from "../components/AIChatbot";
+import { getHealthProfile, getAlertPreferences } from "../api/profileService";
+import { badgeTracker } from "../utils/badgeTracker";
 
-export default function Dashboard() {
+export default function Dashboard({ user, healthProfile: initialHealthProfile }) {
   const [selected, setSelected] = useState(null); // selected map area data
   const [coords, setCoords] = useState({ lat: null, lon: null });
-  const [user, setUser] = useState(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [healthProfile, setHealthProfile] = useState(initialHealthProfile);
+  const [alertPrefs, setAlertPrefs] = useState(null);
+  const [showAlertPrefs, setShowAlertPrefs] = useState(false);
+  const [showChatbot, setShowChatbot] = useState(false);
+  const [badgeNotification, setBadgeNotification] = useState(null);
 
-  // Check for logged in user on mount
+  // Load health profile and alert preferences on mount
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-  }, []);
+    const loadUserData = async () => {
+      if (user) {
+        try {
+          // Load health profile if not provided
+          if (!healthProfile) {
+            const profileData = await getHealthProfile();
+            setHealthProfile(profileData.health_profile);
+          }
+
+          // Load alert preferences
+          const prefsData = await getAlertPreferences();
+          setAlertPrefs(prefsData.alert_prefs);
+        } catch (error) {
+          console.error('Error loading user data:', error);
+        }
+      }
+    };
+
+    loadUserData();
+  }, [user, healthProfile]);
+
+  // Track AQI check on page load and set up badge unlock callback
+  useEffect(() => {
+    if (user) {
+      // Set up badge unlock callback
+      badgeTracker.onBadgeEarned = (badge) => {
+        setBadgeNotification({
+          badge,
+          timestamp: Date.now()
+        });
+        
+        // Auto-hide notification after 5 seconds
+        setTimeout(() => {
+          setBadgeNotification(null);
+        }, 5000);
+      };
+
+      // Track AQI check
+      badgeTracker.trackAction('aqi_check');
+
+      // Check if user came from email alert tracking link
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('alert_opened') === 'true') {
+        badgeTracker.trackAction('alert_opened');
+        
+        // Clean up URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+
+    // Cleanup callback on unmount
+    return () => {
+      if (badgeTracker.onBadgeEarned) {
+        badgeTracker.onBadgeEarned = null;
+      }
+    };
+  }, [user]);
 
   // Map click handler (MapView calls this)
   const handleMapClick = async (lat, lon, data) => {
@@ -57,86 +119,90 @@ export default function Dashboard() {
     );
   };
 
-  // Auth handlers
-  const handleAuthSuccess = (userData) => {
-    setUser(userData);
-  };
-
-  const handleLogout = () => {
-    logoutUser();
-    setUser(null);
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-gray-900">
-      {/* Top title bar */}
-      <header className="bg-white/80 backdrop-blur-md shadow-md border-b border-gray-200/50 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              🌬️ AIRYZE AQI MONITOR
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {user ? (
-              <>
-                <span className="text-sm text-gray-600 hidden sm:inline">
-                  Welcome, <span className="font-semibold">{user.name}</span>
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all"
-              >
-                Login / Sign Up
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-gray-900 flex">
+      {/* Sidebar Navigation */}
+      <Sidebar />
 
-      {/* Hero */}
-      <section
-        className="relative bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: "url('/images/background.jpg')",
-        }}
-      >
-        <div className="backdrop-blur-[2px] bg-gradient-to-r from-blue-900/60 via-indigo-900/60 to-purple-900/60">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 items-center">
-              <div className="col-span-1 lg:col-span-2 text-white animate-fade-in">
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight drop-shadow-lg mb-6">
-                  Breathe Cleaner,{" "}
-                  <span className="text-blue-200">Live Healthier</span>
-                </h1>
-                <p className="text-lg sm:text-xl text-white/95 max-w-2xl leading-relaxed">
-                  Real-time air quality monitoring to help you make safer outdoor
-                  decisions. Click a location on the map below to view detailed
-                  pollutant levels and advice.
-                </p>
-              </div>
+      {/* Main Content */}
+      <div className="flex-1 overflow-x-hidden">
 
-              <div className="flex justify-center lg:justify-end animate-slide-in-right">
-                {/* AQI Meaning Cards */}
-                <AQIMeaningCards />
+        {/* Hero */}
+        <section
+          className="relative bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: "url('/images/background.jpg')",
+          }}
+        >
+          <div className="backdrop-blur-[2px] bg-gradient-to-r from-blue-900/60 via-indigo-900/60 to-purple-900/60">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 items-center">
+                <div className="col-span-1 lg:col-span-2 text-white animate-fade-in">
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight drop-shadow-lg mb-6">
+                    Breathe Cleaner,{" "}
+                    <span className="text-blue-200">Live Healthier</span>
+                  </h1>
+                  <p className="text-lg sm:text-xl text-white/95 max-w-2xl leading-relaxed">
+                    Real-time air quality monitoring to help you make safer outdoor
+                    decisions. Click a location on the map below to view detailed
+                    pollutant levels and advice.
+                  </p>
+                </div>
+
+                <div className="flex justify-center lg:justify-end animate-slide-in-right">
+                  {/* AQI Meaning Cards */}
+                  <AQIMeaningCards />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12 sm:space-y-16">
-        {/* Real-Time AQI Section */}
-        <section className="animate-fade-in-up">
+        {/* Main content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12 sm:space-y-16">
+          {/* Personalized Welcome Section */}
+          {user && healthProfile && (
+            <section className="animate-fade-in-up">
+              <PersonalizedWelcome 
+                user={user} 
+                healthProfile={healthProfile} 
+                currentAQI={selected} 
+              />
+            </section>
+          )}
+
+          {/* Instant Email and Alert Preferences Section */}
+          {user && alertPrefs && (
+            <section className="animate-fade-in-up">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Instant Email Button */}
+                {alertPrefs.instant_button && (
+                  <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+                    <InstantEmailButton user={user} />
+                  </div>
+                )}
+
+                {/* Alert Preferences Button */}
+                <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Settings</h3>
+                  <button
+                    onClick={() => setShowAlertPrefs(true)}
+                    className="w-full px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg font-medium hover:from-indigo-600 hover:to-purple-600 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Manage Alert Preferences</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Real-Time AQI Section */}
+          <section className="animate-fade-in-up">
           <div className="mb-6 sm:mb-8">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 flex items-center gap-3">
               <span className="w-1 h-8 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-full"></span>
@@ -149,11 +215,13 @@ export default function Dashboard() {
 
           {/* Map displayed horizontally (full width) */}
           <div className="w-full mb-8">
-            <div className="relative rounded-2xl overflow-hidden h-[400px] sm:h-[500px] lg:h-[600px] bg-white shadow-2xl border border-gray-200/50 hover:shadow-2xl hover:border-blue-300 transition-all duration-300">
-              <MapView onSelect={handleMapClick} />
+            <div className="relative rounded-2xl overflow-visible h-[400px] sm:h-[500px] lg:h-[600px] bg-white shadow-2xl border border-gray-200/50 hover:shadow-2xl hover:border-blue-300 transition-all duration-300">
+              <div className="absolute inset-0 rounded-2xl overflow-hidden">
+                <MapView onSelect={handleMapClick} />
+              </div>
               <button
                 onClick={handleAutoDetect}
-                className="absolute top-4 right-4 z-[1000] px-4 py-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg hover:bg-white transition-all flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-blue-600"
+                className="absolute bottom-4 right-4 z-[500] px-4 py-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg hover:bg-white transition-all flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-blue-600"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -228,7 +296,7 @@ export default function Dashboard() {
 
               {/* Recommendations Card */}
               <div className="animate-fade-in-up">
-                <Recommendations data={selected || { aqi: 0 }} />
+                <Recommendations data={selected || { aqi: 0 }} healthProfile={healthProfile} />
               </div>
             </div>
           </div>
@@ -276,24 +344,80 @@ export default function Dashboard() {
             <div className="lg:col-span-2 flex flex-col gap-6 sm:gap-8">
               {/* Line Chart Card */}
               <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                <DailyAQILineChart />
+                <DailyAQILineChart lat={coords.lat} lon={coords.lon} />
               </div>
 
               {/* Category Frequency Chart Card */}
               <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
-                <AQICategoryFrequencyChart />
+                <AQICategoryFrequencyChart lat={coords.lat} lon={coords.lon} />
               </div>
             </div>
           </div>
         </section>
-      </main>
+        </main>
 
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={handleAuthSuccess}
-      />
+        {/* Alert Preferences Modal */}
+        <AlertPreferencesModal
+          isOpen={showAlertPrefs}
+          onClose={() => setShowAlertPrefs(false)}
+          user={user}
+        />
+
+        {/* AI Chatbot */}
+        {showChatbot && (
+          <AIChatbot
+            currentAQI={selected?.aqi}
+            city={user?.city}
+            pollutants={selected?.components}
+            onClose={() => setShowChatbot(false)}
+          />
+        )}
+
+        {/* Floating Chat Button */}
+        <button
+          onClick={() => setShowChatbot(true)}
+          className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full shadow-2xl hover:shadow-3xl hover:scale-110 transition-all duration-300 flex items-center justify-center z-40 group"
+          title="Ask AI Assistant"
+        >
+          <svg className="w-7 h-7 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></span>
+        </button>
+
+        {/* Badge Unlock Notification */}
+        {badgeNotification && (
+          <div className="fixed top-20 right-6 z-50 animate-slide-in-right">
+            <div className="bg-white rounded-2xl shadow-2xl border-2 border-yellow-400 p-6 max-w-sm">
+              <div className="flex items-start gap-4">
+                <div className="text-5xl animate-bounce">
+                  {badgeNotification.badge.icon}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">🎉</span>
+                    <h3 className="text-lg font-bold text-gray-800">Badge Unlocked!</h3>
+                  </div>
+                  <p className="text-xl font-bold text-indigo-600 mb-1">
+                    {badgeNotification.badge.name}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {badgeNotification.badge.description}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setBadgeNotification(null)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

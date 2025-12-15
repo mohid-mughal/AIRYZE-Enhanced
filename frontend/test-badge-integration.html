@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Badge Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .progress-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Badge Integration Test Suite</h1>
+    <p>This page tests the complete badge flow including earning, progress tracking, and Supabase sync.</p>
+
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearProgress()">Clear Progress</button>
+        <button onclick="showProgress()">Show Current Progress</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 1: Badge Definitions</h2>
+        <button onclick="testBadgeDefinitions()">Run Test</button>
+        <div id="test1-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Progress Tracking</h2>
+        <button onclick="testProgressTracking()">Run Test</button>
+        <div id="test2-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Badge Earning - Report Contributor</h2>
+        <button onclick="testReportContributor()">Run Test</button>
+        <div id="test3-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Badge Earning - Upvoter</h2>
+        <button onclick="testUpvoter()">Run Test</button>
+        <div id="test4-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 5: Badge Earning - Quiz Master</h2>
+        <button onclick="testQuizMaster()">Run Test</button>
+        <div id="test5-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 6: Badge Earning - City Explorer</h2>
+        <button onclick="testCityExplorer()">Run Test</button>
+        <div id="test6-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 7: LocalStorage Persistence</h2>
+        <button onclick="testPersistence()">Run Test</button>
+        <div id="test7-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 8: All 8 Badges</h2>
+        <button onclick="testAllBadges()">Run Test</button>
+        <div id="test8-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Current Progress</h2>
+        <div id="progress-display" class="progress-display"></div>
+    </div>
+
+    <script type="module">
+        import { BadgeTracker } from './src/utils/badgeTracker.js';
+        import { BADGE_DEFINITIONS, checkBadgeEligibility } from './src/utils/badges.js';
+
+        window.badgeTracker = new BadgeTracker();
+
+        function logResult(testId, message, isPass) {
+            const resultDiv = document.getElementById(`${testId}-results`);
+            const resultClass = isPass ? 'pass' : 'fail';
+            resultDiv.innerHTML += `<div class="test-result ${resultClass}">${isPass ? '✓' : '✗'} ${message}</div>`;
+        }
+
+        function logInfo(testId, message) {
+            const resultDiv = document.getElementById(`${testId}-results`);
+            resultDiv.innerHTML += `<div class="test-result info">ℹ ${message}</div>`;
+        }
+
+        function clearResults(testId) {
+            document.getElementById(`${testId}-results`).innerHTML = '';
+        }
+
+        window.testBadgeDefinitions = function() {
+            clearResults('test1');
+            logInfo('test1', 'Testing badge definitions...');
+
+            const expectedBadges = [
+                'daily_streak_7',
+                'weekly_streak_4',
+                'report_contributor',
+                'upvoter',
+                'downvoter',
+                'quiz_master',
+                'alert_responder',
+                'city_explorer'
+            ];
+
+            logResult('test1', `Found ${BADGE_DEFINITIONS.length} badge definitions`, BADGE_DEFINITIONS.length === 8);
+
+            expectedBadges.forEach(badgeId => {
+                const badge = BADGE_DEFINITIONS.find(b => b.id === badgeId);
+                logResult('test1', `Badge "${badgeId}" exists`, !!badge);
+                if (badge) {
+                    logResult('test1', `  - Has name: ${badge.name}`, !!badge.name);
+                    logResult('test1', `  - Has threshold: ${badge.threshold}`, badge.threshold > 0);
+                    logResult('test1', `  - Has tracking key: ${badge.trackingKey}`, !!badge.trackingKey);
+                }
+            });
+        };
+
+        window.testProgressTracking = function() {
+            clearResults('test2');
+            logInfo('test2', 'Testing progress tracking...');
+
+            const initialProgress = window.badgeTracker.getProgress();
+            logInfo('test2', `Initial reports: ${initialProgress.reports_submitted || 0}`);
+
+            window.badgeTracker.trackAction('report_submit');
+            const afterProgress = window.badgeTracker.getProgress();
+            
+            logResult('test2', 'Report count incremented', afterProgress.reports_submitted === (initialProgress.reports_submitted || 0) + 1);
+            logResult('test2', 'Progress saved to localStorage', !!localStorage.getItem('badgeProgress'));
+        };
+
+        window.testReportContributor = function() {
+            clearResults('test3');
+            logInfo('test3', 'Testing Report Contributor badge (5 reports)...');
+
+            localStorage.clear();
+            window.badgeTracker = new BadgeTracker();
+
+            for (let i = 0; i < 5; i++) {
+                const result = window.badgeTracker.trackAction('report_submit');
+                logInfo('test3', `Report ${i + 1}/5 submitted`);
+                
+                if (i === 4 && result.badgesEarned && result.badgesEarned.length > 0) {
+                    const earned = result.badgesEarned.find(b => b.id === 'report_contributor');
+                    logResult('test3', 'Report Contributor badge earned!', !!earned);
+                    if (earned && earned.message) {
+                        logInfo('test3', `Message: ${earned.message.substring(0, 100)}...`);
+                    }
+                }
+            }
+
+            const progress = window.badgeTracker.getProgress();
+            logResult('test3', 'Badge in earned list', progress.earnedBadges.includes('report_contributor'));
+        };
+
+        window.testUpvoter = function() {
+            clearResults('test4');
+            logInfo('test4', 'Testing Upvoter badge (10 upvotes)...');
+
+            localStorage.clear();
+            window.badgeTracker = new BadgeTracker();
+
+            for (let i = 0; i < 10; i++) {
+                const result = window.badgeTracker.trackAction('upvote');
+                if (i % 3 === 0) logInfo('test4', `Upvote ${i + 1}/10`);
+                
+                if (i === 9 && result.badgesEarned && result.badgesEarned.length > 0) {
+                    const earned = result.badgesEarned.find(b => b.id === 'upvoter');
+                    logResult('test4', 'Upvoter badge earned!', !!earned);
+                }
+            }
+
+            const progress = window.badgeTracker.getProgress();
+            logResult('test4', 'Badge in earned list', progress.earnedBadges.includes('upvoter'));
+        };
+
+        window.testQuizMaster = function() {
+            clearResults('test5');
+            logInfo('test5', 'Testing Quiz Master badge (3 quizzes)...');
+
+            localStorage.clear();
+            window.badgeTracker = new BadgeTracker();
+
+            for (let i = 0; i < 3; i++) {
+                const result = window.badgeTracker.trackAction('quiz_complete');
+                logInfo('test5', `Quiz ${i + 1}/3 completed`);
+                
+                if (i === 2 && result.badgesEarned && result.badgesEarned.length > 0) {
+                    const earned = result.badgesEarned.find(b => b.id === 'quiz_master');
+                    logResult('test5', 'Quiz Master badge earned!', !!earned);
+                }
+            }
+
+            const progress = window.badgeTracker.getProgress();
+            logResult('test5', 'Badge in earned list', progress.earnedBadges.includes('quiz_master'));
+        };
+
+        window.testCityExplorer = function() {
+            clearResults('test6');
+            logInfo('test6', 'Testing City Explorer badge (5 cities)...');
+
+            localStorage.clear();
+            window.badgeTracker = new BadgeTracker();
+
+            const cities = ['Karachi', 'Lahore', 'Islamabad', 'Peshawar', 'Quetta'];
+            
+            for (let i = 0; i < cities.length; i++) {
+                const result = window.badgeTracker.trackAction('city_view', cities[i]);
+                logInfo('test6', `Viewed city: ${cities[i]}`);
+                
+                if (i === 4 && result.badgesEarned && result.badgesEarned.length > 0) {
+                    const earned = result.badgesEarned.find(b => b.id === 'city_explorer');
+                    logResult('test6', 'City Explorer badge earned!', !!earned);
+                }
+            }
+
+            const progress = window.badgeTracker.getProgress();
+            logResult('test6', 'Badge in earned list', progress.earnedBadges.includes('city_explorer'));
+            logResult('test6', 'Correct number of cities tracked', progress.cities_viewed && progress.cities_viewed.length === 5);
+        };
+
+        window.testPersistence = function() {
+            clearResults('test7');
+            logInfo('test7', 'Testing localStorage persistence...');
+
+            localStorage.clear();
+            window.badgeTracker = new BadgeTracker();
+
+            // Track some actions
+            window.badgeTracker.trackAction('upvote');
+            window.badgeTracker.trackAction('upvote');
+            window.badgeTracker.trackAction('report_submit');
+
+            const savedData = localStorage.getItem('badgeProgress');
+            logResult('test7', 'Data saved to localStorage', !!savedData);
+
+            if (savedData) {
+                const parsed = JSON.parse(savedData);
+                logResult('test7', 'Upvotes saved correctly', parsed.upvotes_given === 2);
+                logResult('test7', 'Reports saved correctly', parsed.reports_submitted === 1);
+            }
+
+            // Create new tracker to test restoration
+            window.badgeTracker = new BadgeTracker();
+            const restoredProgress = window.badgeTracker.getProgress();
+            
+            logResult('test7', 'Progress restored on new instance', restoredProgress.upvotes_given === 2);
+        };
+
+        window.testAllBadges = async function() {
+            clearResults('test8');
+            logInfo('test8', 'Testing all 8 badges...');
+
+            localStorage.clear();
+            window.badgeTracker = new BadgeTracker();
+
+            // 1. Daily Streak (7 days)
+            logInfo('test8', 'Simulating 7-day streak...');
+            const today = new Date();
+            for (let i = 0; i < 7; i++) {
+                const checkDate = new Date(today);
+                checkDate.setDate(today.getDate() - (6 - i));
+                localStorage.setItem('lastAqiCheck', checkDate.toISOString().split('T')[0]);
+                window.badgeTracker.trackAction('aqi_check');
+            }
+
+            // 2. Report Contributor
+            logInfo('test8', 'Submitting 5 reports...');
+            for (let i = 0; i < 5; i++) {
+                window.badgeTracker.trackAction('report_submit');
+            }
+
+            // 3. Upvoter
+            logInfo('test8', 'Adding 10 upvotes...');
+            for (let i = 0; i < 10; i++) {
+                window.badgeTracker.trackAction('upvote');
+            }
+
+            // 4. Downvoter
+            logInfo('test8', 'Adding 10 downvotes...');
+            for (let i = 0; i < 10; i++) {
+                window.badgeTracker.trackAction('downvote');
+            }
+
+            // 5. Quiz Master
+            logInfo('test8', 'Completing 3 quizzes...');
+            for (let i = 0; i < 3; i++) {
+                window.badgeTracker.trackAction('quiz_complete');
+            }
+
+            // 6. Alert Responder
+            logInfo('test8', 'Opening 5 alerts...');
+            for (let i = 0; i < 5; i++) {
+                window.badgeTracker.trackAction('alert_opened');
+            }
+
+            // 7. City Explorer
+            logInfo('test8', 'Viewing 5 cities...');
+            const cities = ['Karachi', 'Lahore', 'Islamabad', 'Peshawar', 'Quetta'];
+            for (const city of cities) {
+                window.badgeTracker.trackAction('city_view', city);
+            }
+
+            // 8. Monthly Champion (28 days)
+            logInfo('test8', 'Simulating 28-day streak...');
+            for (let i = 7; i < 28; i++) {
+                const checkDate = new Date(today);
+                checkDate.setDate(today.getDate() - (27 - i));
+                localStorage.setItem('lastAqiCheck', checkDate.toISOString().split('T')[0]);
+                window.badgeTracker.trackAction('aqi_check');
+            }
+
+            const progress = window.badgeTracker.getProgress();
+            logInfo('test8', `Total badges earned: ${progress.earnedBadges.length}`);
+
+            const expectedBadges = [
+                'daily_streak_7',
+                'weekly_streak_4',
+                'report_contributor',
+                'upvoter',
+                'downvoter',
+                'quiz_master',
+                'alert_responder',
+                'city_explorer'
+            ];
+
+            expectedBadges.forEach(badgeId => {
+                const earned = progress.earnedBadges.includes(badgeId);
+                const badge = BADGE_DEFINITIONS.find(b => b.id === badgeId);
+                logResult('test8', `${badge.name} earned`, earned);
+            });
+
+            logResult('test8', 'All 8 badges earned', progress.earnedBadges.length === 8);
+        };
+
+        window.clearProgress = function() {
+            localStorage.clear();
+            window.badgeTracker = new BadgeTracker();
+            showProgress();
+            alert('Progress cleared!');
+        };
+
+        window.showProgress = function() {
+            const progress = window.badgeTracker.getProgress();
+            const display = document.getElementById('progress-display');
+            
+            let html = '<h3>Current Progress:</h3>';
+            html += `<p><strong>Earned Badges:</strong> ${progress.earnedBadges.length}/8</p>`;
+            html += '<ul>';
+            progress.earnedBadges.forEach(badgeId => {
+                const badge = BADGE_DEFINITIONS.find(b => b.id === badgeId);
+                html += `<li>${badge ? badge.name : badgeId}</li>`;
+            });
+            html += '</ul>';
+            
+            html += '<h4>Progress Counters:</h4>';
+            html += `<p>AQI Checks Streak: ${progress.aqi_checks || 0}</p>`;
+            html += `<p>Reports Submitted: ${progress.reports_submitted || 0}</p>`;
+            html += `<p>Upvotes Given: ${progress.upvotes_given || 0}</p>`;
+            html += `<p>Downvotes Given: ${progress.downvotes_given || 0}</p>`;
+            html += `<p>Quizzes Completed: ${progress.quizzes_completed || 0}</p>`;
+            html += `<p>Alerts Opened: ${progress.alerts_opened || 0}</p>`;
+            html += `<p>Cities Viewed: ${progress.cities_viewed ? progress.cities_viewed.length : 0}</p>`;
+            
+            display.innerHTML = html;
+        };
+
+        window.runAllTests = async function() {
+            testBadgeDefinitions();
+            await new Promise(r => setTimeout(r, 500));
+            testProgressTracking();
+            await new Promise(r => setTimeout(r, 500));
+            testReportContributor();
+            await new Promise(r => setTimeout(r, 500));
+            testUpvoter();
+            await new Promise(r => setTimeout(r, 500));
+            testQuizMaster();
+            await new Promise(r => setTimeout(r, 500));
+            testCityExplorer();
+            await new Promise(r => setTimeout(r, 500));
+            testPersistence();
+            await new Promise(r => setTimeout(r, 500));
+            testAllBadges();
+            await new Promise(r => setTimeout(r, 500));
+            showProgress();
+        };
+
+        // Show initial progress
+        showProgress();
+    </script>
+</body>
+</html>
